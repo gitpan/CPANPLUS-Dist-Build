@@ -29,7 +29,7 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
 local $Params::Check::VERBOSE = 1;
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 =pod
 
@@ -140,7 +140,7 @@ Storage of the C<Module::Build> object we used for this installation.
 
 =head1 METHODS
 
-=head2 format_available();
+=head2 $bool = CPANPLUS::Dist::Build->format_available();
 
 Returns a boolean indicating whether or not you can use this package
 to create and install modules in your environment.
@@ -160,7 +160,7 @@ sub format_available {
 }
 
 
-=pod $bool = $dist->init();
+=head2 $bool = $dist->init();
 
 Sets up the C<CPANPLUS::Dist::Build> object for use.
 Effectively creates all the needed status accessors.
@@ -186,7 +186,16 @@ sub init {
 
 =pod
 
-=head2 $dist->prepare()
+=head2 $bool = $dist->prepare([perl => '/path/to/perl', buildflags => 'EXTRA=FLAGS', force => BOOL, verbose => BOOL])
+
+C<prepare> prepares a distribution, running C<Module::Build>'s 
+C<new_from_context> method, and establishing any prerequisites this
+distribution has.
+
+After a succcesfull C<prepare> you may call C<create> to create the
+distribution, followed by C<install> to actually install it.
+
+Returns true on success and false on failure.
 
 =cut
 
@@ -368,7 +377,7 @@ sub _find_prereqs {
 =head2 $dist->create([perl => '/path/to/perl', buildflags => 'EXTRA=FLAGS', prereq_target => TARGET, force => BOOL, verbose => BOOL, skiptest => BOOL])
 
 C<create> preps a distribution for installation. This means it will
-run C<perl Build.PL>, C<Build> and C<Build test>.
+run C<Build> and C<Build test>, via the C<Module::Build> API.
 This will also satisfy any prerequisites the module may have.
 
 If you set C<skiptest> to true, it will skip the C<Build test> stage.
@@ -381,7 +390,6 @@ Returns true on success and false on failure.
 
 You may then call C<< $dist->install >> on the object to actually
 install it.
-Returns true on success and false on failure.
 
 =cut
 
