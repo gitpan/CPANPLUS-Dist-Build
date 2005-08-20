@@ -29,7 +29,7 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
 local $Params::Check::VERBOSE = 1;
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 =pod
 
@@ -151,7 +151,7 @@ to create and install modules in your environment.
 sub format_available {
     my $mod = "Module::Build";
     unless( can_load( modules => { $mod => '0.2611' } ) ) {
-        error( loc( "You do not have '%1' -- '%2' not available",
+        cp_error( loc( "You do not have '%1' -- '%2' not available",
                     $mod, __PACKAGE__ ) );
         return;
     }
@@ -216,7 +216,7 @@ sub prepare {
 
     my $dir;
     unless( $dir = $self->status->extract ) {
-        error( loc( "No dir found to operate on!" ) );
+        cp_error( loc( "No dir found to operate on!" ) );
         return;
     }
 
@@ -243,7 +243,7 @@ sub prepare {
     ### chdir to work directory ###
     my $orig = cwd();
     unless( $cb->_chdir( dir => $dir ) ) {
-        error( loc( "Could not chdir to build directory '%1'", $dir ) );
+        cp_error( loc( "Could not chdir to build directory '%1'", $dir ) );
         return;
     }
 
@@ -281,7 +281,7 @@ sub prepare {
         my $mb = eval { Module::Build->new_from_context( %buildflags ) };
         #my $mb = eval { Module::Build->new_from_context( ) };
         if( !$mb or $@ ) {
-            error(loc("Could not create Module::Build object: %1","$@"));
+            cp_error(loc("Could not create Module::Build object: %1","$@"));
             $fail++; last RUN;
         }
 
@@ -303,7 +303,7 @@ sub prepare {
                 ### XXX just skip it for now.. not sure if it's the best
                 ### thing to do -- but some times a module (like Config)
                 ### is not in the index, but it's part of core...
-                #error(loc("Unable to find '%1' in the module tree ".
+                #cp_error(loc("Unable to find '%1' in the module tree ".
                 #          "-- unable to satisfy prerequisites", $mod));
                 #$fail++; last RUN;
                 next;
@@ -345,12 +345,12 @@ sub prepare {
             buffer  => CPANPLUS::Error->stack_as_string,
             verbose => $verbose,
             force   => $force,
-        ) or error(loc("Failed to send test report for '%1'",
+        ) or cp_error(loc("Failed to send test report for '%1'",
                     $self->module ) );
     }
 
     unless( $cb->_chdir( dir => $orig ) ) {
-        error( loc( "Could not chdir back to start dir '%1'", $orig ) );
+        cp_error( loc( "Could not chdir back to start dir '%1'", $orig ) );
     }
 
     ### save where we wrote this stuff -- same as extract dir in normal
@@ -411,7 +411,7 @@ sub create {
 
     my $dir;
     unless( $dir = $self->status->extract ) {
-        error( loc( "No dir found to operate on!" ) );
+        cp_error( loc( "No dir found to operate on!" ) );
         return;
     }
 
@@ -446,7 +446,7 @@ sub create {
 
     ### is this dist prepared?
     unless( $dist->status->prepared ) {
-        error( loc( "You have not successfully prepared a '%2' distribution ".
+        cp_error( loc( "You have not successfully prepared a '%2' distribution ".
                     "yet -- cannot create yet", __PACKAGE__ ) );
         return;
     }
@@ -454,7 +454,7 @@ sub create {
     ### chdir to work directory ###
     my $orig = cwd();
     unless( $cb->_chdir( dir => $dir ) ) {
-        error( loc( "Could not chdir to build directory '%1'", $dir ) );
+        cp_error( loc( "Could not chdir to build directory '%1'", $dir ) );
         return;
     }
 
@@ -499,13 +499,13 @@ sub create {
                     );
 
         unless( $cb->_chdir( dir => $dir ) ) {
-            error( loc( "Could not chdir to build directory '%1'", $dir ) );
+            cp_error( loc( "Could not chdir to build directory '%1'", $dir ) );
             return;
         }
 
         unless( $ok ) {
             #### use $dist->flush to reset the cache ###
-            error( loc( "Unable to satisfy prerequisites for '%1' " .
+            cp_error( loc( "Unable to satisfy prerequisites for '%1' " .
                         "-- aborting install", $self->module ) );
             $dist->status->build(0);
             $fail++; $prereq_fail++;
@@ -514,7 +514,7 @@ sub create {
 
         eval { $mb->dispatch('build', %buildflags) };
         if( $@ ) {
-            error(loc("Could not run '%1': %2", 'Build', "$@"));
+            cp_error(loc("Could not run '%1': %2", 'Build', "$@"));
             $dist->status->build(0);
             $fail++; last RUN;
         }
@@ -532,7 +532,7 @@ sub create {
         unless( $skiptest ) {
             eval { $mb->dispatch('test', %buildflags) };
             if( $@ ) {
-                error(loc("Could not run '%1': %2", 'Build test', "$@"));
+                cp_error(loc("Could not run '%1': %2", 'Build test', "$@"));
 
                 unless($force) {
                     $dist->status->test(0);
@@ -542,12 +542,12 @@ sub create {
                 $dist->status->test(1);
             }
         } else {
-            msg(loc("Tests skipped"), $verbose);
+            cp_msg(loc("Tests skipped"), $verbose);
         }            
     }
 
     unless( $cb->_chdir( dir => $orig ) ) {
-        error( loc( "Could not chdir back to start dir '%1'", $orig ) );
+        cp_error( loc( "Could not chdir back to start dir '%1'", $orig ) );
     }
 
     ### send out test report? ###
@@ -559,7 +559,7 @@ sub create {
             verbose         => $verbose,
             force           => $force,
             tests_skipped   => $skiptest,
-        ) or error(loc("Failed to send test report for '%1'",
+        ) or cp_error(loc("Failed to send test report for '%1'",
                     $self->module ) );
     }
 
@@ -607,14 +607,14 @@ sub install {
 
     my $dir;
     unless( $dir = $self->status->extract ) {
-        error( loc( "No dir found to operate on!" ) );
+        cp_error( loc( "No dir found to operate on!" ) );
         return;
     }
 
     my $orig = cwd();
 
     unless( $cb->_chdir( dir => $dir ) ) {
-        error( loc( "Could not chdir to build directory '%1'", $dir ) );
+        cp_error( loc( "Could not chdir to build directory '%1'", $dir ) );
         return;
     }
 
@@ -622,7 +622,7 @@ sub install {
     if( defined $self->status->installed && 
         !$self->status->installed && !$force
     ) {
-        error( loc( "Module '%1' has failed to install before this session " .
+        cp_error( loc( "Module '%1' has failed to install before this session " .
                     "-- aborting install", $self->module ) );
         return;
     }
@@ -647,7 +647,7 @@ sub install {
                             buffer  => \$buffer,
                             verbose => $verbose )
         ) {
-            error(loc("Could not run '%1': %2", 'Build install', $buffer));
+            cp_error(loc("Could not run '%1': %2", 'Build install', $buffer));
             $fail++;
         }
     } else {
@@ -655,14 +655,14 @@ sub install {
 
         eval { $mb->dispatch('install', %buildflags) };
         if( $@ ) {
-            error(loc("Could not run '%1': %2", 'Build install', "$@"));
+            cp_error(loc("Could not run '%1': %2", 'Build install', "$@"));
             $fail++;
         }
     }
 
 
     unless( $cb->_chdir( dir => $orig ) ) {
-        error( loc( "Could not chdir back to start dir '%1'", $orig ) );
+        cp_error( loc( "Could not chdir back to start dir '%1'", $orig ) );
     }
 
     return $dist->status->installed( $fail ? 0 : 1 );
@@ -698,14 +698,14 @@ sub dist_dir {
     
     my $dir;
     unless( $dir = $self->status->extract ) {
-        error( loc( "No dir found to operate on!" ) );
+        cp_error( loc( "No dir found to operate on!" ) );
         return;
     }
     
     ### chdir to work directory ###
     my $orig = cwd();
     unless( $cb->_chdir( dir => $dir ) ) {
-        error( loc( "Could not chdir to build directory '%1'", $dir ) );
+        cp_error( loc( "Could not chdir to build directory '%1'", $dir ) );
         return;
     }
 
@@ -716,7 +716,7 @@ sub dist_dir {
 
         eval { $mb->dispatch('distdir') };
         if( $@ ) {
-            error(loc("Could not run '%1': %2", 'Build distdir', "$@"));
+            cp_error(loc("Could not run '%1': %2", 'Build distdir', "$@"));
             ++$fail, last TRY;
         }
 
@@ -725,13 +725,13 @@ sub dist_dir {
                                                 $self->package_version );
 
         unless( -d $distdir ) {
-            error(loc("Do not know where '%1' got created", 'distdir'));
+            cp_error(loc("Do not know where '%1' got created", 'distdir'));
             ++$fail, last TRY;
         }
     }
 
     unless( $cb->_chdir( dir => $orig ) ) {
-        error( loc( "Could not chdir to start directory '%1'", $orig ) );
+        cp_error( loc( "Could not chdir to start directory '%1'", $orig ) );
         return;
     }
 
