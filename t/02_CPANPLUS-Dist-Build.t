@@ -23,6 +23,13 @@ use Data::Dumper;
 use Config;
 use IPC::Cmd        'can_run';
 
+$SIG{__WARN__} = sub {warn @_ unless @_ && $_[0] =~ /redefined|isn't numeric/};
+
+# Load these two modules in advance, even though they would be
+# auto-loaded, because we want to override some of their subs.
+use ExtUtils::Packlist;
+use ExtUtils::Installed;
+
 my $Class   = 'CPANPLUS::Dist::Build';
 my $Utils   = 'CPANPLUS::Internals::Utils';
 my $Have_CC =  can_run($Config{'cc'} )? 1 : 0;
@@ -31,19 +38,16 @@ my $Have_CC =  can_run($Config{'cc'} )? 1 : 0;
 my $Lib     = File::Spec->rel2abs(File::Spec->catdir( qw[dummy-perl] ));
 my $Src     = File::Spec->rel2abs(File::Spec->catdir( qw[src] ));
 
-
 my $Verbose = @ARGV ? 1 : 0;
-my $Conf    = CPANPLUS::Configure->new( 
-                conf => {   
-                    base        => 'dummy-cpanplus',   
-                    dist_type   => '',
-                    verbose     => $Verbose,
-                    ### running tests will mess with the test output 
-                    ### counter so skip 'm
-                    skiptest    => 1,
-                } );
+my $CB      = CPANPLUS::Backend->new;
+my $Conf    = $CB->configure_object;
 
-my $CB      = CPANPLUS::Backend->new( $Conf );
+$Conf->set_conf( base       => 'dummy-cpanplus' );
+$Conf->set_conf( dist_type  => '' );
+$Conf->set_conf( verbose    => $Verbose );
+$Conf->set_conf( signature  => 0 );
+### running tests will mess with the test output so skip 'm
+$Conf->set_conf( skiptest   => 1 );
 
                 # path, cc needed?
 my %Map     = ( noxs    => 0,
@@ -113,6 +117,9 @@ while( my($path,$need_cc) = each %Map ) {
     SKIP: {
         skip("The CC compiler listed in Config.pm is not available " .
              "-- skipping compile tests", 5) if $need_cc && !$Have_CC;
+        skip("Module::Build is not compiled with C support ".
+             "-- skipping compile tests", 5) 
+             unless Module::Build->_mb_feature('C_support');
 
         ok( $mod->create( ),    "Creating module" );
         ok( $mod->status->dist_cpan->status->created,
@@ -134,20 +141,56 @@ while( my($path,$need_cc) = each %Map ) {
                                 "Installing module" ); 
             ok( $mod->status->installed,    
                                 "   Status says module installed" );
-
         }
 
         SKIP: {
-            skip(q[Can't uninstall: Module::Build writes no .packlist], 1);
-        
-            ### XXX M::B doesn't seem to write into the .packlist...
-            ### can't figure out what to uninstall then...
+            my $minversion = 0.2609;
+            skip(qq[Uninstalling requires at least Module::Build $minversion], 1)
+              unless eval { Module::Build->VERSION($minversion); 1 };
+
+            # The installation directory actually needs to be in @INC
+            # in order to test uninstallation
+            'lib'->import( File::Spec->catdir($Lib, 'lib', 'perl5') );
+
+            # EU::Installed and CP+::M are only capable of searching
+            # for modules in the core directories.  We need to fake
+            # them out with our own subs here.
+            my $packlist = find_module($mod->name . '::.packlist');
+            ok $packlist, "Found packlist";
+            
+            my $p = ExtUtils::Packlist->new($packlist);
+            ok keys(%$p) > 0, "Packlist contains entries";
+
+            local *CPANPLUS::Module::installed_version = sub {1};
+            local *CPANPLUS::Module::packlist = sub { [$p] };
+            local *ExtUtils::Installed::files = sub { keys %$p };
+            
             ok( $mod->uninstall,"Uninstalling module" );
         }
     }
 
     ### throw away all the extracted stuff
     $Utils->_rmdir( dir => $Conf->get_conf('base') );
+}
+
+sub find_module {
+  my $module = shift;
+
+  # Don't add the .pm yet, in case it's a packlist or something like ExtUtils::xsubpp.
+  my $file = File::Spec->catfile( split m/::/, $module );
+  my $candidate;
+  foreach (@INC) {
+    if (-e ($candidate = File::Spec->catdir($_, $file))
+        or
+        -e ($candidate = File::Spec->catdir($_, "$file.pm"))
+        or
+        -e ($candidate = File::Spec->catdir($_, 'auto', $file))
+        or
+        -e ($candidate = File::Spec->catdir($_, 'auto', "$file.pm"))) {
+      return $candidate;
+    }
+  }
+  return;
 }
 
 # Local variables:
