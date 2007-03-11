@@ -5,6 +5,7 @@ WriteMakefile (
     NAME            => 'CPANPLUS::Dist::Build',
     VERSION_FROM    => 'lib/CPANPLUS/Dist/Build.pm', # finds $VERSION
     dist            => { COMPRESS => 'gzip -9f', SUFFIX => 'gz' },
+    clean           => { FILES => 't/dummy-cpanplus' },
     PREREQ_PM       => { 
                         'Test::More'                => 0, 
                         'CPANPLUS'                  => '0.072',
@@ -13,7 +14,7 @@ WriteMakefile (
                         'IPC::Cmd'                  => '0.23',
                         'Module::Load::Conditional' => '0.06',
                         'Module::Pluggable'         => '2.4',
-                        'Module::Build'             => '0.2611',
+                        'Module::Build'             => '0.28',
                         'File::Spec'                => 0,
                     },
     AUTHOR          => 'Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>',
