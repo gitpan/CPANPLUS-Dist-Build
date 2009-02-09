@@ -21,6 +21,7 @@ use CPANPLUS::Error;
 use Config;
 use FileHandle;
 use Cwd;
+use version;
 
 use IPC::Cmd                    qw[run];
 use Params::Check               qw[check];
@@ -29,7 +30,7 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
 local $Params::Check::VERBOSE = 1;
 
-$VERSION = '0.05';
+$VERSION = '0.06_03';
 
 =pod
 
@@ -273,19 +274,25 @@ sub prepare {
     RUN: {
         # Wrap the exception that may be thrown here (should likely be
         # done at a much higher level).
-        my $mb = eval { 
-            my $env = 'ENV_CPANPLUS_IS_EXECUTING';
-            local $ENV{$env} = BUILD_PL->( $dir );
-            Module::Build->new_from_context( %buildflags ) 
-        };
-        if( !$mb or $@ ) {
-            error(loc("Could not create Module::Build object: %1","$@"));
+        my $prep_output;
+
+        my $env = 'ENV_CPANPLUS_IS_EXECUTING';
+        local $ENV{$env} = BUILD_PL->( $dir );
+
+        unless ( scalar run(    command => [$perl, BUILD_PL->($dir), $buildflags],
+                                buffer  => \$prep_output,
+                                verbose => $verbose ) 
+        ) {
+            error( loc( "Build.PL failed: %1", $prep_output ) );
             $fail++; last RUN;
         }
 
-        $dist->status->_mb_object( $mb );
+        msg( $prep_output, 0 );
 
-        $self->status->prereqs( $dist->_find_prereqs( verbose => $verbose ) );
+        $self->status->prereqs( $dist->_find_prereqs( verbose => $verbose, 
+                                                      dir => $dir, 
+                                                      perl => $perl,
+                                                      buildflags => $buildflags ) );
 
     }
     
@@ -314,15 +321,63 @@ sub prepare {
 
 sub _find_prereqs {
     my $dist = shift;
-    my $mb   = $dist->status->_mb_object;
     my $self = $dist->parent;
     my $cb   = $self->parent;
+    my $conf = $cb->configure_object;
+    my %hash = @_;
+
+    my ($verbose, $dir, $buildflags, $perl);
+    my $tmpl = {
+        verbose => { default => $conf->get_conf('verbose'), store => \$verbose },
+        dir     => { default => $self->status->extract, store => \$dir },
+        perl    => { default => $^X, store => \$perl },
+        buildflags => { default => $conf->get_conf('buildflags'),
+                        store   => \$buildflags },
+    };
+    
+    my $args = check( $tmpl, \%hash ) or return;
 
     my $prereqs = {};
-    foreach my $type ('requires', 'build_requires') {
-      my $p = $mb->$type() || {};
-      $prereqs->{$_} = $p->{$_} foreach keys %$p;
+
+    my $safe_ver = version->new('0.31_03');
+
+    my $content;
+
+    if ( version->new( $Module::Build::VERSION ) >= $safe_ver ) {
+        # Use the new Build action 'prereq_data'
+        
+        unless ( scalar run(    command => [$perl, BUILD->($dir), 'prereq_data', $buildflags],
+                                buffer  => \$content,
+                                verbose => 0 ) 
+        ) {
+            error( loc( "Build 'prereq_data' failed: %1 %2", $!, $content ) );
+            return;
+        }
+
     }
+    else {
+        my $file = File::Spec->catfile( $dir, '_build', 'prereqs' );
+        return unless -f $file;
+
+        my $fh = FileHandle->new();
+
+        unless( $fh->open( $file ) ) {
+           error( loc( "Cannot open '%1': %2", $file, $! ) );
+           return;
+        }
+        
+        $content = do { local $/; <$fh> };
+    }
+
+    my $bphash = eval $content;
+    return unless $bphash and ref $bphash eq 'HASH';
+    foreach my $type ('requires', 'build_requires') {
+       next unless $bphash->{$type} and ref $bphash->{$type} eq 'HASH';
+       $prereqs->{$_} = $bphash->{$type}->{$_} for keys %{ $bphash->{$type} };
+    }
+
+    # Temporary fix
+    delete $prereqs->{'perl'};
 
     ### allows for a user defined callback to filter the prerequisite
     ### list as they see fit, to remove (or add) any prereqs they see
@@ -339,34 +394,6 @@ sub _find_prereqs {
 
     ### make sure it's not the same ref
     return { %$href };
-}
-
-sub prereq_satisfied {
-  # Return true if this prereq is satisfied.  Return false if it's
-  # not.  Also issue an error if the latest CPAN version doesn't
-  # satisfy it.
-  
-  my ($dist, %args) = @_;
-  my $mb   = $dist->status->_mb_object;
-  my $cb   = $dist->parent->parent;
-  my $mod = $args{modobj}->module;
-  
-  my $status = $mb->check_installed_status($mod, $args{version});
-  return 1 if $status->{ok};
-  
-  # Check the latest version from the CPAN index
-  {
-    no strict 'refs';
-    local ${$mod . '::VERSION'} = $args{modobj}->version;
-    $status = $mb->check_installed_status($mod, $args{version});
-  }
-  unless( $status->{ok} ) {
-    error(loc("This distribution depends on $mod, but the latest version of $mod on CPAN ".
-	      "doesn't satisfy the specific version dependency ($args{version}). ".
-	      "Please try to resolve this dependency manually."));
-  }
-  
-  return 0;
 }
 
 =pod
@@ -509,42 +536,60 @@ sub create {
             last RUN;
         }
 
-        eval { $mb->dispatch('build', %buildflags) };
-        if( $@ ) {
-            error(loc("Could not run '%1': %2", 'Build', "$@"));
+        my $captured;
+
+        unless ( scalar run(    command => [$perl, BUILD->($dir), $buildflags],
+                                buffer  => \$captured,
+                                verbose => $verbose ) 
+        ) {
+            error( loc( "MAKE failed:\n%1", $captured ) );
             $dist->status->build(0);
             $fail++; last RUN;
         }
 
+        msg( $captured, 0 );
+
         $dist->status->build(1);
 
         ### add this directory to your lib ###
-        $cb->_add_to_includepath(
-            directories => [ BLIB_LIBDIR->( $self->status->extract ) ]
-        );
+        #$cb->_add_to_includepath(
+        #    directories => [ BLIB_LIBDIR->( $self->status->extract ) ]
+        #);
+        $self->add_to_includepath();
 
         ### this buffer will not include what tests failed due to a 
         ### M::B/Test::Harness bug. Reported as #9793 with patch 
         ### against 0.2607 on 26/1/2005
         unless( $skiptest ) {
-            eval { $mb->dispatch('test', %buildflags) };
-            if( $@ ) {
-                error(loc("Could not run '%1': %2", 'Build test', "$@"));
+            my $test_output;
+            my $flag    = ON_VMS ? '"test"' : 'test';
+            my $cmd     = [$perl, BUILD->($dir), $flag, $buildflags];
+            unless ( scalar run(    command => $cmd,
+                                    buffer  => \$test_output,
+                                    verbose => $verbose ) 
+            ) {
+                error( loc( "MAKE TEST failed:\n%1 ", $test_output ) );
 
                 ### mark specifically *test* failure.. so we dont
                 ### send success on force...
                 $test_fail++;
 
-                unless($force) {
+                if( !$force and !$cb->_callbacks->proceed_on_test_failure->(
+                                      $self, $@ )
+                ) {
                     $dist->status->test(0);
                     $fail++; last RUN;
                 }
-            } else {
+
+            } 
+            else {
+                msg( $test_output, 0 );
                 $dist->status->test(1);
             }
-        } else {
+        } 
+        else {
             msg(loc("Tests skipped"), $verbose);
-        }            
+        }
     }
 
     unless( $cb->_chdir( dir => $orig ) ) {
@@ -637,7 +682,9 @@ sub install {
         ### don't worry about loading the right version of M::B anymore
         ### the 'new_from_context' already added the 'right' path to
         ### M::B at the top of the build.pl
-        my $cmd     = [$perl, BUILD->($dir), 'install', $buildflags];
+        ### On VMS, flags need to be quoted
+        my $flag    = ON_VMS ? '"install"' : 'install';
+        my $cmd     = [$perl, BUILD->($dir), $flag, $buildflags];
         my $sudo    = $conf->get_program('sudo');
         unshift @$cmd, $sudo if $sudo;
 
@@ -653,10 +700,18 @@ sub install {
     } else {
         my %buildflags = $dist->_buildflags_as_hash($buildflags);
 
-        eval { $mb->dispatch('install', %buildflags) };
-        if( $@ ) {
-            error(loc("Could not run '%1': %2", 'Build install', "$@"));
+        my $install_output;
+        my $flag    = ON_VMS ? '"install"' : 'install';
+        my $cmd     = [$perl, BUILD->($dir), $flag, $buildflags];
+        unless( scalar run( command => $cmd,
+                            buffer  => \$install_output,
+                            verbose => $verbose )
+        ) {
+            error(loc("Could not run '%1': %2", 'Build install', $install_output));
             $fail++;
+        }
+        else {
+            msg( $install_output, 0 );
         }
     }
 
@@ -769,6 +824,8 @@ like C<testers.cpan.org>.
 Originally by Jos Boumans E<lt>kane@cpan.orgE<gt>.  Brought to working
 condition and currently maintained by Ken Williams E<lt>kwilliams@cpan.orgE<gt>.
 
+Other hackery by Chris 'BinGOs' Williams ( no relation ). E<lt>bingos@cpan.orgE<gt>.
+
 =head1 COPYRIGHT
 
 The CPAN++ interface (of which this module is a part of) is
@@ -783,9 +840,11 @@ terms as Perl itself.
 
 1;
 
+
 # Local variables:
 # c-indentation-style: bsd
 # c-basic-offset: 4
 # indent-tabs-mode: nil
 # End:
 # vim: expandtab shiftwidth=4:
+

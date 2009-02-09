@@ -1,22 +1,28 @@
 --- #YAML:1.0
-name:                CPANPLUS-Dist-Build
-version:             0.05
-abstract:            CPANPLUS plugin to install packages that use Build.PL
-license:             ~
-generated_by:        ExtUtils::MakeMaker version 6.32
-distribution_type:   module
-requires:     
-    CPANPLUS:                      0.072
-    File::Spec:                    0
-    IPC::Cmd:                      0.23
-    Locale::Maketext::Simple:      0
-    Module::Build:                 0.28
-    Module::Load::Conditional:     0.06
-    Module::Pluggable:             2.4
-    Params::Check:                 0.22
-    Test::More:                    0
-meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
-    version: 1.2
+name:               CPANPLUS-Dist-Build
+version:            0.06_03
+abstract:           CPANPLUS plugin to install packages that use Build.PL
 author:
     - Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    CPANPLUS:             0.80
+    File::Spec:           0
+    IPC::Cmd:             0.23
+    Locale::Maketext::Simple:  0
+    Module::Build:        0.28
+    Module::Load::Conditional:  0.06
+    Module::Pluggable:    2.4
+    Params::Check:        0.22
+    Test::More:           0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.48
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

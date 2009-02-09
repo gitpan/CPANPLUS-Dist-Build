@@ -1,12 +1,7 @@
-BEGIN { chdir 't' if -d 't' };
-
-### this is to make devel::cover happy ###
-BEGIN {
-    use File::Spec;
-    require lib;
-    for (qw[../lib inc]) {
-        my $l = 'lib'; $l->import(File::Spec->rel2abs($_)) 
-    }
+### make sure we can find our conf.pl file
+BEGIN { 
+    use FindBin; 
+    require "$FindBin::Bin/inc/conf.pl";
 }
 
 use strict;
@@ -18,7 +13,7 @@ use CPANPLUS::Module::Author::Fake;
 
 use Config;
 use Test::More      'no_plan';
-use File::Basename  ();
+use File::Basename  qw[basename];
 use Data::Dumper;
 use Config;
 use IPC::Cmd        'can_run';
@@ -44,11 +39,15 @@ my $Conf    = $CB->configure_object;
 
 
 ### create a fake object, so we don't use the actual module tree
+### make sure to add dslip data, so CPANPLUS doesn't try to find
+### it in another module in the package, for which it needs the
+### module tree
 my $Mod = CPANPLUS::Module::Fake->new(
                 module  => 'Foo::Bar',
                 path    => 'src',
                 author  => CPANPLUS::Module::Author::Fake->new,
                 package => 'Foo-Bar-0.01.tar.gz',
+                dslip   => 'RdpO?',
             );
 
 $Conf->set_conf( base       => 'dummy-cpanplus' );
@@ -57,6 +56,19 @@ $Conf->set_conf( verbose    => $Verbose );
 $Conf->set_conf( signature  => 0 );
 ### running tests will mess with the test output so skip 'm
 $Conf->set_conf( skiptest   => 1 );
+
+### dmq tells us that we should run with /nologo
+### if using nmake, as it's very noise otherwise.
+### XXX copied from CPANPLUS' test include file!
+{   my $make = $Conf->get_program('make');
+    if( $make and basename($make) =~ /^nmake/i and
+        $make !~ m|/nologo|
+    ) {
+        $make .= ' /nologo';
+        $Conf->set_program( make => $make );
+    }
+}
+    
 
                 # path, cc needed?
 my %Map     = ( noxs    => 0,
@@ -90,7 +102,7 @@ while( my($path,$need_cc) = each %Map ) {
                 
     ### set the fetch location -- it's local
     {   my $where = File::Spec->rel2abs(
-                            File::Spec->catdir( $Src, $path, $mod->package )
+                            File::Spec->catfile( $Src, $path, $mod->package )
                         );
                         
         $mod->status->fetch( $where );
@@ -152,7 +164,13 @@ while( my($path,$need_cc) = each %Map ) {
 
             # The installation directory actually needs to be in @INC
             # in order to test uninstallation
-            'lib'->import( File::Spec->catdir($Lib, 'lib', 'perl5') );
+            {   my $libdir = File::Spec->catdir($Lib, 'lib', 'perl5');
+                
+                # lib.pm is documented to require unix-style paths
+                $libdir = VMS::Filespec::unixify($libdir) if $^O eq 'VMS';
+
+                'lib'->import( $libdir );
+            }
 
             # EU::Installed and CP+::M are only capable of searching
             # for modules in the core directories.  We need to fake
@@ -199,7 +217,12 @@ while( my($path,$need_cc) = each %Map ) {
     ### since we're die'ing in the Build.PL, do a local *STDERR,
     ### so we dont spam the result through the test -- this is expected
     ### behaviour after all.
-    my $rv = do { local *STDERR; $clone->prepare( force => 1 ) };
+    ### also quell the warning for print() on unopened fh...
+    my $rv = do { 
+                local $^W;
+#                local *STDERR; 
+                $clone->prepare( force => 1 ) 
+            };
     ok( !$rv,                   '   $mod->prepare failed' );
 
     my $re = quotemeta( $build_pl );
@@ -214,17 +237,24 @@ while( my($path,$need_cc) = each %Map ) {
 sub find_module {
   my $module = shift;
 
-  # Don't add the .pm yet, in case it's a packlist or something like ExtUtils::xsubpp.
+  ### Don't add the .pm yet, in case it's a packlist or something 
+  ### like ExtUtils::xsubpp.
   my $file = File::Spec->catfile( split m/::/, $module );
   my $candidate;
   foreach (@INC) {
-    if (-e ($candidate = File::Spec->catdir($_, $file))
+    if (-e ($candidate = File::Spec->catfile($_, $file))
         or
-        -e ($candidate = File::Spec->catdir($_, "$file.pm"))
+        -e ($candidate = File::Spec->catfile($_, "$file.pm"))
         or
-        -e ($candidate = File::Spec->catdir($_, 'auto', $file))
+        -e ($candidate = File::Spec->catfile($_, 'auto', $file))
         or
-        -e ($candidate = File::Spec->catdir($_, 'auto', "$file.pm"))) {
+        -e ($candidate = File::Spec->catfile($_, 'auto', "$file.pm"))
+        or
+        -e ($candidate = File::Spec->catfile($_, $Config{archname},
+                                             'auto', $file))
+        or
+        -e ($candidate = File::Spec->catfile($_, $Config{archname},
+                                             'auto', "$file.pm"))) {
       return $candidate;
     }
   }

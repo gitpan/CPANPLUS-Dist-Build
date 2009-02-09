@@ -1,5 +1,24 @@
 Revision history for Perl extension CPANPLUS::Dist::Build.
 
+0.06_03	Mon Feb  9 16:31:10 GMT 2009
+
+ - process separation for Build.PL, Build, test and install actions, 
+   using IPC::Cmd
+ - If M::B is version 0.31_03 or greater use 'Build prereq_data' to
+   work out prereqs, otherwise fallback on poking around in _build/
+   like CPAN.pm does.
+ - Resolved issues with test reports for FAILs being misgraded as UKNOWN.
+
+0.06_02 - 
+
+ - Fixed some issues with test output not appearing in CPAN Tester
+   reports. [Chris Williams]
+
+0.06 - Fri May  4 14:11:36 2007
+
+ - Make test suite compatible with the perl core. No functional
+   changes in this release; users need not upgrade.
+
 0.05 - Sun Mar 11 16:58:13 2007
 
  - Set $ENV{PERL5_CPANPLUS_IS_EXECUTING} to the full path of the

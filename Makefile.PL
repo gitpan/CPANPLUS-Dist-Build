@@ -5,10 +5,10 @@ WriteMakefile (
     NAME            => 'CPANPLUS::Dist::Build',
     VERSION_FROM    => 'lib/CPANPLUS/Dist/Build.pm', # finds $VERSION
     dist            => { COMPRESS => 'gzip -9f', SUFFIX => 'gz' },
-    clean           => { FILES => 't/dummy-cpanplus' },
+    clean           => { FILES => 't/dummy-cpanplus t/dummy-perl/lib/perl5' },
     PREREQ_PM       => { 
                         'Test::More'                => 0, 
-                        'CPANPLUS'                  => '0.072',
+                        'CPANPLUS'                  => '0.80',
                         'Locale::Maketext::Simple'  => 0,
                         'Params::Check'             => '0.22',
                         'IPC::Cmd'                  => '0.23',
@@ -20,3 +20,5 @@ WriteMakefile (
     AUTHOR          => 'Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>',
     ABSTRACT        => 'CPANPLUS plugin to install packages that use Build.PL',
 );     
+
+
