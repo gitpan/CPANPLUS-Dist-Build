@@ -1,28 +1,32 @@
---- #YAML:1.0
-name:               CPANPLUS-Dist-Build
-version:            0.06_03
-abstract:           CPANPLUS plugin to install packages that use Build.PL
+---
+abstract: 'CPANPLUS plugin to install packages that use Build.PL'
 author:
-    - Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>
-license:            unknown
-distribution_type:  module
-configure_requires:
-    ExtUtils::MakeMaker:  0
-requires:
-    CPANPLUS:             0.80
-    File::Spec:           0
-    IPC::Cmd:             0.23
-    Locale::Maketext::Simple:  0
-    Module::Build:        0.28
-    Module::Load::Conditional:  0.06
-    Module::Pluggable:    2.4
-    Params::Check:        0.22
-    Test::More:           0
-no_index:
-    directory:
-        - t
-        - inc
-generated_by:       ExtUtils::MakeMaker version 6.48
+  - 'Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>'
+build_requires:
+  Test::More: 0.47
+distribution_type: module
+generated_by: 'Module::Install version 0.79'
+license: perl
 meta-spec:
-    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
-    version:  1.4
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: CPANPLUS-Dist-Build
+no_index:
+  directory:
+    - inc
+    - t
+requires:
+  CPANPLUS: 0.84
+  File::Spec: 0
+  IPC::Cmd: 0.42
+  Locale::Maketext::Simple: 0
+  Module::Build: 0.28
+  Module::Load: 0.16
+  Module::Load::Conditional: 0.30
+  Module::Pluggable: 3.8
+  Params::Check: 0.26
+  Test::Harness: 3.15
+  perl: 5.6.0
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.06_04

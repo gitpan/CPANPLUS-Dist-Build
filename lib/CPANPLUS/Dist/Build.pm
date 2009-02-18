@@ -30,13 +30,13 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
 local $Params::Check::VERBOSE = 1;
 
-$VERSION = '0.06_03';
+$VERSION = '0.06_04';
 
 =pod
 
 =head1 NAME
 
-CPANPLUS::Dist::Build
+CPANPLUS::Dist::Build - CPANPLUS plugin to install packages that use Build.PL
 
 =head1 SYNOPSIS
 
@@ -552,9 +552,9 @@ sub create {
         $dist->status->build(1);
 
         ### add this directory to your lib ###
-        #$cb->_add_to_includepath(
-        #    directories => [ BLIB_LIBDIR->( $self->status->extract ) ]
-        #);
+#        $cb->_add_to_includepath(
+#            directories => [ BLIB_LIBDIR->( $self->status->extract ) ]
+#        );
         $self->add_to_includepath();
 
         ### this buffer will not include what tests failed due to a 
