@@ -25,8 +25,8 @@ requires:
   Module::Load::Conditional: 0.30
   Module::Pluggable: 3.8
   Params::Check: 0.26
-  Test::Harness: 3.15
+  Test::Harness: 3.16
   perl: 5.6.0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.06_04
+version: 0.06_05
