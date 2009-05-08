@@ -33,4 +33,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://svn.perl.org/modules/CPANPLUS-Dist-Build/trunk
-version: 0.26
+version: 0.28
