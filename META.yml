@@ -21,10 +21,10 @@ no_index:
 provides:
   CPANPLUS::Dist::Build:
     file: lib/CPANPLUS/Dist/Build.pm
-    version: 0.32
+    version: 0.34
   CPANPLUS::Dist::Build::Constants:
     file: lib/CPANPLUS/Dist/Build/Constants.pm
-    version: 0.32
+    version: 0.34
 requires:
   CPANPLUS: 0.84
   File::Spec: 0
@@ -40,4 +40,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: origin
-version: 0.32
+version: 0.34
