@@ -3,12 +3,13 @@ abstract: 'CPANPLUS plugin to install packages that use Build.PL'
 author:
   - 'Jos Boumans <kane[at]cpan.org>, Ken Williams <kwilliams@cpan.org>'
 build_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.62
   Test::More: 0.47
 configure_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.62
 distribution_type: module
-generated_by: 'Module::Install version 1.01'
+dynamic_config: 1
+generated_by: 'Module::Install version 1.04'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -21,10 +22,10 @@ no_index:
 provides:
   CPANPLUS::Dist::Build:
     file: lib/CPANPLUS/Dist/Build.pm
-    version: 0.58
+    version: 0.60
   CPANPLUS::Dist::Build::Constants:
     file: lib/CPANPLUS/Dist/Build/Constants.pm
-    version: 0.58
+    version: 0.60
 requires:
   CPANPLUS: 0.84
   ExtUtils::Install: 1.42
@@ -39,5 +40,10 @@ requires:
   Test::Harness: 3.16
   perl: 5.6.0
 resources:
+  homepage: https://github.com/bingos/cpanplus-dist-build/tree
   license: http://dev.perl.org/licenses/
-version: 0.58
+  repository:
+    type: git
+    url: git://github.com/bingos/cpanplus-dist-build.git
+    web: https://github.com/bingos/cpanplus-dist-build/tree
+version: 0.60
