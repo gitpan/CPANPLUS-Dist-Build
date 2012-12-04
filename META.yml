@@ -22,10 +22,10 @@ no_index:
 provides:
   CPANPLUS::Dist::Build:
     file: lib/CPANPLUS/Dist/Build.pm
-    version: 0.64
+    version: 0.66
   CPANPLUS::Dist::Build::Constants:
     file: lib/CPANPLUS/Dist/Build/Constants.pm
-    version: 0.64
+    version: 0.66
 requires:
   CPANPLUS: 0.84
   ExtUtils::Install: 1.42
@@ -46,4 +46,4 @@ resources:
     type: git
     url: git://github.com/bingos/cpanplus-dist-build.git
     web: https://github.com/bingos/cpanplus-dist-build/tree
-version: 0.64
+version: 0.66
