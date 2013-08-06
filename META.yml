@@ -22,10 +22,10 @@ no_index:
 provides:
   CPANPLUS::Dist::Build:
     file: lib/CPANPLUS/Dist/Build.pm
-    version: 0.72
+    version: 0.74
   CPANPLUS::Dist::Build::Constants:
     file: lib/CPANPLUS/Dist/Build/Constants.pm
-    version: 0.72
+    version: 0.74
 requires:
   CPANPLUS: 0.84
   ExtUtils::Install: 1.42
@@ -35,7 +35,6 @@ requires:
   Module::Build: 0.32
   Module::Load: 0.16
   Module::Load::Conditional: 0.30
-  Module::Pluggable: 3.8
   Params::Check: 0.26
   Test::Harness: 3.16
   if: 0
@@ -44,4 +43,4 @@ resources:
   homepage: https://github.com/bingos/cpanplus-dist-build/tree
   license: http://dev.perl.org/licenses/
   repository: git://github.com/bingos/cpanplus-dist-build.git
-version: 0.72
+version: 0.74
